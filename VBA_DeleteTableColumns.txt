@@ -1,0 +1,26 @@
+Sub COEComm_Mail_Delete()
+'*******************************************************************************
+' COEComm_Mail_Delete()
+' Created winter 2013
+' Purpose:	Delete excess columns from mail file
+' Inputs:	
+' Outputs:	
+' Notes:	To be run after Mail_File_Table
+'
+' Summary:	Delete all columns between "Record_Number" and 
+'			"SpouseID/Alum_indicator".  Ask for user input on deleting address
+'			country column and delete as appropriate.
+'*******************************************************************************
+    range("Table1[Record_Number]:Table1[SpouseID/Alum_indicator]").Select
+    Selection.Delete Shift:=xlToLeft
+    Dim Intl As String
+    Intl = MsgBox(Prompt:="Does this mailing include international addresses?", _
+            Buttons:=vbYesNo, Title:="International Addresses")
+    If Intl = vbYes Then
+        range("Table1[County]:Table1[Campaign_code]").Select
+        Selection.Delete Shift:=xlToLeft
+    ElseIf Intl = vbNo Then
+        range("Table1[Foreign_Country]:Table1[Campaign_code]").Select
+        Selection.Delete Shift:=xlToLeft
+    End If
+End Sub

@@ -1,0 +1,33 @@
+Sub SortCommunications()
+'*******************************************************************************
+' SortCommunications
+' Created Winter 2014
+' Purpose:  Sort and filter communications requests to relevant work orders
+' Inputs:
+' Outputs:
+' Notes:	This macro is specific to Communications Requests FY18.xlsx
+'
+' Summary:  Filter requests to dates that are greater than or equal to 60 days 
+'           previous to current date.
+'           Remove other sort fields if applicable and sort in ascending order
+'           by "Date Needed" column
+'*******************************************************************************
+    Dim curDate As Date
+    curDate = Now() - 60
+    
+    'Filter and Sort Communications Sheet
+    ActiveWorkbook.Worksheets("Communications").ListObjects("Table2").range. _
+        AutoFilter Field:=14, Criteria1:=">=" & curDate, Operator:=xlAnd
+    ActiveWorkbook.Worksheets("Communications").ListObjects("Table2").Sort. _
+        SortFields.Clear
+    ActiveWorkbook.Worksheets("Communications").ListObjects("Table2").Sort. _
+        SortFields.Add Key:=range("Table2[[#All],[Date Needed]]"), SortOn:= _
+        xlSortOnValues, Order:=xlAscending, DataOption:=xlSortTextAsNumbers
+    With ActiveWorkbook.Worksheets("Communications").ListObjects("Table2").Sort
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+End Sub

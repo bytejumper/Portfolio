@@ -1,0 +1,125 @@
+Sub ListRequests()
+'*******************************************************************************
+' ListRequests
+' Created Spring 2015
+' Purpose:  Update Outlook calendar from list request spreadsheet
+' Inputs:
+' Outputs:
+' Notes:	This macro is specific to Communications Requests FY18.xlsx
+'
+' Summary:  Add appointments to Outlook calendar based on table rows in 
+'           Communications spreadsheet. Only applicable to requests greater than
+'           or equal to the previous 60 days.
+'           Uses Subject for list description
+'           Uses Location for type of list
+'           Assigns category for applicable department
+'           Uses Body to show list details
+'           Uses BusyStatus to show state of request:
+'               Out of Office —> stand-in designation for completed
+'               Busy —> stand-in designation for sent to UIF AG
+'               Tentative —> stand-in designation for scheduled, not sent to UIF AG
+'*******************************************************************************
+    Dim curDate As Date
+    curDate = Now() - 60
+    
+    ' Create the Outlook session
+    Set myOutlook = GetObject(, "Outlook.Application")
+    Set myFolder = myOutlook.GetNamespace("MAPI").GetDefaultFolder(9). _
+        Folders("Scheduled Communication List Requests")
+    
+    Dim lo As Excel.ListObject
+    Set lo = Sheets("Communications").ListObjects("Table2")
+    Range("N1").Select
+    ActiveCell.Offset(1, 0).Activate
+    Do Until ActiveCell.Value >= curDate
+        ActiveCell.Offset(1, 0).Activate
+    Loop
+    r = ActiveCell.Row
+    
+    Do Until Trim(Cells(r, 15).Value) = ""
+        ' Appointment parameters
+        ID = r
+        subject = Cells(r, 6).Value
+        ListType = Cells(r, 5).Value
+        Department = Cells(r, 4).Value
+        If Cells(r, 14).Value = "12:00:00 AM" Then
+            DateNeeded = Cells(r, 15).Value
+        Else
+            DateNeeded = Cells(r, 14).Value
+        End If
+        Details = "UIF Work Order(s): " _
+                & Chr(11) & Cells(r, 17).Value _
+                & Chr(11) & Chr(11) _
+                & "Fund: " & Cells(r, 9).Value _
+                & Chr(11) & Chr(11) _
+                & "Criteria: " _
+                & Chr(11) & Cells(r, 7).Value _
+                & Chr(11) & Chr(11) _
+                & "Count(s): " _
+                & Chr(11) & Cells(r, 18).Value
+            
+        ' Check for existing appointment of same parameters
+        CreateNew = True
+        For Each olapt In myFolder.Items
+            If CLng(olapt.Mileage) = ID Then
+                If olapt.Start <> DateNeeded Then
+                olapt.Start = DateNeeded
+                End If
+                If olapt.subject <> subject Then
+                olapt.subject = subject
+                End If
+                If olapt.Location <> ListType Then
+                olapt.Location = ListType
+                End If
+                If olapt.Categories <> Department Then
+                olapt.Categories = Department
+                End If
+                If olapt.Body <> Details Then
+                olapt.Body = Details
+                End If
+                If Trim(Cells(r, 13).Value) <> "" Then
+                    olapt.BusyStatus = 3 ' Out of Office --> stand-in designation for completed
+                ElseIf Trim(Cells(r, 17).Value) <> "" Then
+                    olapt.BusyStatus = 2 ' Busy --> stand-in designation for sent to UIF AG
+                Else
+                    olapt.BusyStatus = 1 ' Tentative
+                    olapt.Body = "Estimated date to complete programming: " & Cells(r, 14).Value _
+                        & Chr(11) & Chr(11) _
+                        & olapt.Body
+                End If
+                olapt.Save
+                CreateNew = False
+                Exit For
+            End If
+        Next olapt
+        
+        ' If no existing appointment, create new one
+        If CreateNew = True Then
+            ' Create the AppointmentItem
+            Set myApt = myFolder.Items.Add(1)
+            With myApt
+                ' Set the appointment properties
+                .Mileage = ID
+                .subject = subject
+                .Location = ListType
+                .Categories = Department
+                .Start = DateNeeded
+                .ReminderSet = False
+                .Body = Details
+                .AllDayEvent = True
+                If Trim(Cells(r, 13).Value) <> "" Then
+                    .BusyStatus = 3 ' Out of Office --> stand-in designation for completed
+                ElseIf Trim(Cells(r, 17).Value) <> "" Then
+                    .BusyStatus = 2 ' Busy --> stand-in designation for sent to UIF AG
+                Else
+                    .BusyStatus = 1 ' Tentative
+                    .Body = "Estimated date to complete programming: " & Cells(r, 14).Value _
+                        & Chr(11) & Chr(11) _
+                        & .Body
+                End If
+                .Save
+            End With
+        End If
+        r = r + 1
+    Loop
+End Sub
